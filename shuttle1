@@ -1,0 +1,154 @@
+clearscreen.
+print "Main engines start...".
+declare tme is 1.0.//thrust main engines
+
+lock throttle to tme.
+stage.
+wait 6.
+stage.
+
+declare targetap is 250000.0.//target apoapsis
+declare targetpe is 140000.0.//target periapsis
+declare targetinc is 28.5.//target inlcination
+declare targetpitch is 90.0.//target pitch
+declare initialpitchrate is 0.4.//the pitch over rate at the beginning
+declare prevap is 0.0.//previous program cycles apoapsis
+declare hdg is 90.0.//the targeted heading calculated by azimuth claculator that follows
+
+//calculating hdg:
+set hdg to arcsin((cos(targetinc)/cos(28.5))).
+
+
+
+until periapsis > (targetpe - 1000) {
+clearscreen.
+print "PROGRAMM 1".
+print "HDG:" + hdg.
+print " ".
+
+
+declare ov is ROUND(SQRT((velocity:orbit:x * velocity:orbit:x) + (velocity:orbit:y * velocity:orbit:y) + 
+(velocity:orbit:z * velocity:orbit:z))).
+
+declare twr is (SHIP:THRUST /(mass * 9.81)).
+
+print "ALTITUDE:".
+print altitude.
+print " ".
+
+print "APOAPSIS:".
+print apoapsis.
+print " ".
+
+print "PERIAPSIS:".
+print periapsis.
+print " ".
+
+print "ORBITAL VELOCITY:".
+print ov.
+print " ".
+
+print "THROTTLE:".
+print (((throttle * 100) * 0.4) + 60).
+print " ".
+
+print "VEHICLE MASS:".
+print mass.
+print " ".
+
+print "THRUST:".
+print SHIP:THRUST.
+print " ".
+
+print "TWR:".
+print twr.
+print " ".
+
+print "ACC:".
+print (twr * 9.81).
+print " ".
+//mainengine lock and staging event management:
+if (missiontime > 113 AND missiontime < 114) {
+toggle AG10.
+wait 1.0.
+}.
+if (missiontime > 120 AND missiontime < 121) {
+stage.
+wait 1.0.
+}.
+
+//throttle management:
+lock throttle to tme.
+
+if (missiontime > 60 AND missiontime < 70) {
+set tme to 1.0.
+print "go at throttle up".
+}.
+
+
+if (missiontime > 40 AND missiontime < 60) {
+set tme to 0.175.
+print "3 at 67".
+}.
+
+if (twr > 3 and tme > 0.05) {
+set tme to tme -0.025.
+}.
+
+//guidance:
+if (airspeed < 50) {
+lock steering to UP + R(0,0,180).
+print "liftoff confirmed".
+}.
+
+if (airspeed > 50 AND airspeed < 120) {
+lock steering to UP + R(0,0,hdg).
+print "roll program".
+}. 
+
+if (airspeed > 120 AND targetpitch > 45) {
+lock steering to HEADING(hdg,targetpitch) + R(0,0,180).
+set targetpitch to (targetpitch - (initialpitchrate * 0.1)).
+print airspeed.
+print targetpitch.
+print "initial pitch programm".
+}.
+
+if (missiontime > 120 AND missiontime < 180 AND targetpitch > 20.0) {
+lock steering to HEADING(hdg,targetpitch) + R(0,0,180).
+set targetpitch to (targetpitch - (0.2 * 0.1)).
+print airspeed.
+print targetpitch.
+print "pitching for final".
+}.
+
+if (missiontime > 180 AND apoapsis < (targetap - 10000)) {
+set targetpitch to 20.
+lock steering to HEADING(hdg,targetpitch) + R(0,0,180).
+print "waiting for final".
+}.
+
+if (apoapsis > (targetap - 4000) AND apoapsis < (targetap - 1000)){
+set targetpitch to 10.
+lock steering to HEADING(hdg,targetpitch).
+}
+
+if (apoapsis > (targetap - 1000)) {
+lock steering to HEADING(hdg,targetpitch).
+print "final".
+print targetpitch.
+if (prevap < apoapsis) {
+set targetpitch to (targetpitch - 0.02).
+}.
+if (apoapsis < prevap){
+set targetpitch to (targetpitch + 0.02).
+}.
+}.
+
+
+
+set prevap to apoapsis.
+
+wait 0.01.
+}.
+lock throttle to 0.0.
